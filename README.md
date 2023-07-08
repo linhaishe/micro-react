@@ -45,6 +45,10 @@ function Greeting({ name }) {
 }
 ```
 
+![image-20230708205904655](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/image-20230708205927710.png)
+
+![image-20230708211805918](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/image-20230708211805918.png)
+
 ## replace ReactDOM.render
 
 **node 相关 api 请查询 DOM 资料**
@@ -64,6 +68,8 @@ const node = document.createElement(element.type);
 node['title'] = element.props.title;
 
 // Using textNode instead of setting innerText will allow us to treat all elements in the same way later. Note also how we set the nodeValue like we did it with the h1 title, it’s almost as if the string had props: {nodeValue: "hello"}.
+
+// 不通过innerHtml去创建文本节点，而是通过createTextNode去创建，如果是是纯文本则通过createTextNode去创建，如果是其他的元素则通过createElement去创建。
 const text = document.createTextNode('');
 text['nodeValue'] = element.props.children;
 
@@ -73,5 +79,5 @@ container.appendChild(node);
 
 # refs
 
-1. react createElement : https://react.dev/reference/react/createElement
-2. build-your-own-react with vanilla js tutorial https://pomb.us/build-your-own-react/
+1. [react createElement](https://react.dev/reference/react/createElement)
+2. [build-your-own-react with vanilla js tutorial](https://pomb.us/build-your-own-react/) 

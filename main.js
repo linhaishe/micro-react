@@ -1,10 +1,13 @@
-import { createElement } from './utils/index';
+import { createElement, render } from './utils/index';
 
 const element = createElement(
   'h1',
-  { title: 'hello' },
+  { id: 'title', style: 'background: pink' },
   'Hello, world!',
   createElement('h2')
 );
+
+const container = document.querySelector('#root');
+render(element, container);
 
 console.log('element', element);
