@@ -79,7 +79,7 @@ container.appendChild(node);
 
 # Step II: The `render` Function
 
-```
+```js
 export default function render(element, container) {
   // 创建dom
   const dom =
@@ -119,9 +119,31 @@ react 把所有的渲染工作切碎成一个一个小的工作单元，当浏�
 
 `requestIdleCallback(callback)`
 
+requestIdleCallback schedules the low-priority or non-essential function to be called in the free time at the end of the frame.
+
 The callback function is passed an [`IdleDeadline`](https://developer.mozilla.org/en-US/docs/Web/API/IdleDeadline) object describing the amount of time available and whether or not the callback has been run because the timeout period expired.
 
 `requestIdleCallback` also gives us a deadline parameter. We can use it to check how much time we have until the browser needs to take control again.
+
+```js
+function lowPriorityWork(deadline) {
+    while (deadline.timeRemaining() > 0 && workList.length > 0)
+      performUnitOfWork();
+  
+    if (workList.length > 0)
+      requestIdleCallback(lowPriorityWork);
+  }
+```
+
+
+
+# Step IV: Fibers
+
+Fiber -> 结构 ； fiber -> 一个节点的一个fiber 数据类型
+
+FIber Tree 里 一个parent 只能有一个child，child 也只能只有一个sibling
+
+Fiber Tree 也是为了更快的找到下一个工作单元Î
 
 # refs
 
@@ -129,3 +151,4 @@ The callback function is passed an [`IdleDeadline`](https://developer.mozilla.or
 2. [build-your-own-react with vanilla js tutorial](https://pomb.us/build-your-own-react/)
 3. [An Introduction to React Fiber - The Algorithm Behind React](https://www.velotio.com/engineering-blog/react-fiber-algorithm)
 4. [window: requestIdleCallback() method](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback)
+5. [React的思考（五）- Reconciliation](http://benweizhu.github.io/blog/2018/04/22/deep-thinking-in-react-5/)

@@ -1,44 +1,116 @@
-export default function render(element, container) {
+function createDom(fiber) {
   // 创建dom
   const dom =
-    element.type === 'TEXT_ELEMENT'
+    fiber.type === 'TEXT_ELEMENT'
       ? document.createTextNode('')
-      : document.createElement(element.type);
+      : document.createElement(fiber.type);
 
   // 添加属性
-  Object.keys(element.props)
+  Object.keys(fiber.props)
     .filter((key) => key !== 'children')
-    .map((key) => (dom[key] = element.props[key]));
+    .map((key) => (dom[key] = fiber.props[key]));
 
   // 把children的节点内容追加进父节点dom中,递归渲染子元素
-  element.props.children.map((child) => render(child, dom));
+  fiber.props.children.map((child) => render(child, dom));
 
-  // 把dom追加到父节点root中
-  container.append(dom);
+  return dom;
+}
 
-  let nextUnitOfWork = null;
+let nextUnitOfWork = null;
 
-  // 调度函数
-  function workLoop(deadline) {
-    // 应该退出这个工作单元，不处理这个工作单元
-    let shouldYield = false;
-    // 有工作 且 不应该退出
-    while (nextUnitOfWork && !shouldYield) {
-      // 做工作
-      nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-      // 查看是否还有足否的时间
-      shouldYield = deadline.timeRemaining() < 1;
+function render(element, container) {
+  // set next unit of work
+  // render的作用不再是创建节点，而是处理nextunitofwork
+  // a fiber, we set nextUnitOfWork to the root of the fiber tree. 第一个任务，渲染根节点
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    sibling: null,
+    child: null,
+    parent: null,
+  };
+}
+
+// 调度函数
+function workLoop(deadline) {
+  // 应该退出这个工作单元，不处理这个工作单元
+  let shouldYield = false;
+  // 有工作 且 不应该退出
+  while (nextUnitOfWork && !shouldYield) {
+    // 做工作
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    // 查看是否还有足够的时间
+    shouldYield = deadline.timeRemaining() < 1;
+  }
+
+  // 没有足够的时间，请求下一次浏览器空闲的时候执行
+  requestIdleCallback(workLoop);
+}
+
+// 第一次请求
+requestIdleCallback(workLoop);
+
+// performUnitOfWork function that not only performs the work but also returns the next unit of work.
+// 接受到的第一个fiber就是root节点
+// 这里主要的功能内容是做一个Fiber Tree 和 处理nextunitofwork
+function performUnitOfWork(fiber) {
+  console.log('fiber', fiber);
+  console.log('fiber.dom', fiber.dom);
+
+  // add dom node
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+    console.log('!fiber.dom', fiber.dom);
+  }
+
+  // 追加到父节点
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom);
+  }
+
+  // create new fibers, 给children新建fiber
+  const elements = fiber.props.children;
+  let prevSibling = null;
+
+  // 建立fiber之间的联系，构建Fiber Tree
+  for (let index = 0; index < elements.length; index++) {
+    const element = elements[index];
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+      child: null,
+      siblings: null,
+    };
+
+    if (index === 0) {
+      fiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
     }
 
-    // 没有足够的时间，请求下一次浏览器空闲的时候执行
-    requestIdleCallback(workLoop);
+    prevSibling = newFiber;
+    index++;
+  }
+  // return next unit of work
+  if (fiber.child) {
+    return fiber.child;
   }
 
-  // 第一次请求
-  requestIdleCallback(workLoop);
+  let nextFiber = fiber;
 
-  // performUnitOfWork function that not only performs the work but also returns the next unit of work.
-  function performUnitOfWork(nextUnitOfWork) {
-    // TODO
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    }
+    // 如果没有siblings，则去寻找parent
+    nextFiber = nextFiber.parent;
+
+    // 如果什么都没有就会return null;说明已经遍历完成
   }
 }
+
+export default render;
