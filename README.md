@@ -1,3 +1,5 @@
+// read.me
+
 # micro-react
 
 build your own react with vanilla js
@@ -98,7 +100,6 @@ export default function render(element, container) {
   // 把dom追加到父节点root中
   container.append(dom);
 }
-
 ```
 
 # Step III: Concurrent Mode
@@ -113,7 +114,7 @@ react 把所有的渲染工作切碎成一个一个小的工作单元，当浏�
 
 每一个 filber 就是一个 unit of work，浏览器进程可以打断每一个 fiber，优先级高的事情处理完之后，告诉 react，react 在进行下一步的 fiber 处理。
 
-我们通过`requestIdleCallback`进行 loop
+我们通过 `requestIdleCallback` 进行 `eventloop`
 
 > The **`window.requestIdleCallback()`** method queues a function to be called during a browser's idle periods.
 
@@ -127,23 +128,84 @@ The callback function is passed an [`IdleDeadline`](https://developer.mozilla.or
 
 ```js
 function lowPriorityWork(deadline) {
-    while (deadline.timeRemaining() > 0 && workList.length > 0)
-      performUnitOfWork();
-  
-    if (workList.length > 0)
-      requestIdleCallback(lowPriorityWork);
-  }
+  while (deadline.timeRemaining() > 0 && workList.length > 0)
+    performUnitOfWork();
+
+  if (workList.length > 0) requestIdleCallback(lowPriorityWork);
+}
 ```
-
-
 
 # Step IV: Fibers
 
-Fiber -> 结构 ； fiber -> 一个节点的一个fiber 数据类型
+## Fiber and fiber
 
-FIber Tree 里 一个parent 只能有一个child，child 也只能只有一个sibling
+> This new reconciliation algorithm from React is called Fiber Reconciler. The name comes from fiber, which it uses to represent the node of the DOM tree.
 
-Fiber Tree 也是为了更快的找到下一个工作单元Î
+**reconciliation algorithm**
+
+比对/协调算法，react 里的 reconciliation 是比对 ui 组件更新前后的数据，它的作用是 React 用来区分一个节点树和另一个节点树的算法，以确定哪些部分需要更改。
+
+the action of making consistent or congruous （in dictionary
+
+> fiber: 是一个简单的 js 对象，表示的是 React element 或者是 a node of the DOM tree，是一个工作单元(unit of work)
+>
+> Fiber: is the React Fiber reconciler.React Fiber creates a linked list of nodes where each node is a fiber.
+
+fiber object actually look: You can find the detailed structure in the[ React codebase](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js#L49).
+
+## FIber Tree
+
+FIber Tree 里 一个 parent 只能有一个 child，child 也只能只有一个 sibling
+
+Fiber Tree 也是为了更快的找到下一个工作单元
+
+放图
+
+## Reconciliation
+
+`reconciliation` 的含义和作用，通过[Top-Down Reconciliation](https://legacy.reactjs.org/blog/2015/12/18/react-components-elements-and-instances.html#top-down-reconciliation) 和 [Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html)官文可以了解到：reconciliation is the algorithm for diffing two DOM trees.这是 React 称之为协调的一部分流程，它始于调用 ReactDOM.render()或 setState()方法。在协调的结束时，React 会知道最终的 DOM 树结构，然后像 react-dom 或 react-native 这样的渲染器会应用最小化的变化来更新 DOM 节点
+
+**The main goals of the Fiber reconciler are**
+
+1. incremental rendering, better or smoother rendering of UI animations and gestures, and responsiveness of the user interactions.
+2. allows you to divide the work into multiple chunks and divide the rendering work over multiple frames. It also
+3. adds the ability to define the priority for each unit of work and pause, reuse, and abort the work.
+
+**How does React Fiber work?**
+
+Fiber brings in different levels of priority for updates in React. It breaks the computation of the component tree into nodes, or 'units' of work that it can commit at any time. This allows React to pause, resume or restart computation for various components.
+
+Fiber allows the reconciliation and rendering to the DOM to be split into two separate phases:
+
+Phase 1: Reconciliation phase / Render Phase
+
+异步的
+
+In the first phase, React creates a list of all changes to be rendered in the UI (an 'effect list', comprising of new and updated components).
+Once the list is fully computed, React will schedule these changes to be executed in the next phase.
+Note that React doesn't make any actual changes in this phase.
+
+Phase 2: Commit phase
+
+同步的
+
+In phase two, also called 'commit' phase, React tells the DOM to render the effect list that was created in the previous phase.
+
+While the Reconciliation phase can be interrupted, the Commit phase cannot.
+
+So via Fiber, React is able to traverse the component tree through a singly linked list tree traversal algorithm. This algorithm can run in an "asynchronous" manner - allowing React to pause and resume work at particular nodes.
+
+```js
+function performUnitOfWork(fiber) {
+  // TODO add dom node
+  // TODO create new fibers
+  // TODO return next unit of work
+}
+```
+
+# Step V: Render and Commit Phases
+
+**the browser could interrupt our work before we finish rendering the whole tree.**
 
 # refs
 
@@ -151,4 +213,8 @@ Fiber Tree 也是为了更快的找到下一个工作单元Î
 2. [build-your-own-react with vanilla js tutorial](https://pomb.us/build-your-own-react/)
 3. [An Introduction to React Fiber - The Algorithm Behind React](https://www.velotio.com/engineering-blog/react-fiber-algorithm)
 4. [window: requestIdleCallback() method](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback)
-5. [React的思考（五）- Reconciliation](http://benweizhu.github.io/blog/2018/04/22/deep-thinking-in-react-5/)
+5. [React 的思考（五）- Reconciliation](http://benweizhu.github.io/blog/2018/04/22/deep-thinking-in-react-5/)
+6. [【翻译】Reconciliation React 比对算法](https://github.com/cnsnake11/blog/blob/master/ReactNative%E7%BF%BB%E8%AF%91/Reconciliation.md)
+7. [React Components, Elements, and Instances](https://legacy.reactjs.org/blog/2015/12/18/react-components-elements-and-instances.html#top-down-reconciliation)
+8. [Introduction to React Fiber](https://flexiple.com/react/react-fiber/)
+9. https://namansaxena-official.medium.com/react-virtual-dom-reconciliation-and-fiber-reconciler-cd33ceb0478e
