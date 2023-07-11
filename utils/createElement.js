@@ -12,7 +12,7 @@ function createTextElement(text) {
   };
 }
 
-// 方法的作用通过生成的对象里面的信息能渲染出来一一对应的DOM元素，但三个参数开始全是children参数
+// 方法的作用通过生成的对象里面的信息能渲染出来一一对应的DOM元素，但第三个参数开始全是children参数
 export default function createElement(type, props, ...children) {
   return {
     type,

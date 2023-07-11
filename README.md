@@ -203,9 +203,32 @@ function performUnitOfWork(fiber) {
 }
 ```
 
+```
+    if (index === 0) {
+      fiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+```
+
+这段记录一下，如果`index === 0`，则` fiber.child = newFiber;`，跳出判断，走`prevSibling = newFiber;`，下一次循环 fiber tree 进入判断的时候，` prevSibling.sibling = newFiber;`中的`prevSibling.sibling`是上一次构建好的`newfiber`，即`child.sibling = newFiber`
+
 # Step V: Render and Commit Phases
 
 **the browser could interrupt our work before we finish rendering the whole tree.**
+
+# Step VI: Reconciliation
+
+// reconcileChildren 为什么要写 这个函数的原因 解释一下
+// todo 流程总结/附图
+
+1. if the old fiber and the new element have the same type, we can keep the DOM node and just update it with the new props
+
+2. if the type is different and there is a new element, it means we need to create a new DOM node
+
+3. and if the types are different and there is an old fiber, we need to remove the old node
 
 # refs
 

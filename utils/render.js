@@ -1,5 +1,7 @@
 let nextUnitOfWork = null;
 let wipRoot = null;
+let currentRoot = null; // the last fiber tree we committed to the DOM.
+let deletions = null;
 
 function createDom(fiber) {
   // 创建dom
@@ -28,9 +30,51 @@ function render(element, container) {
     sibling: null,
     child: null,
     parent: null,
+    alternate: currentRoot, // This property is a link to the old fiber, the fiber that we committed to the DOM in the previous commit phase.
   };
-
+  deletions = [];
   nextUnitOfWork = wipRoot;
+}
+
+function updateDom(dom, prevProps, nextProps) {
+  const isEvent = (key) => key.startsWith('on');
+  // 删除已经没有的props
+  Object.keys(prevProps)
+    .filter((key) => key != 'children' && !isEvent(key))
+    // 不在nextProps中
+    .filter((key) => !key in nextProps)
+    .forEach((key) => {
+      // 清空属性
+      dom[key] = '';
+    });
+
+  // 添加新增的属性/修改变化的属性
+  Object.keys(nextProps)
+    .filter((key) => key !== 'children' && !isEvent(key))
+    // 不再prevProps中
+    .filter((key) => !key in prevProps || prevProps[key] !== nextProps[key])
+    .forEach((key) => {
+      dom[key] = nextProps[key];
+    });
+
+  // 删除事件处理函数
+  Object.keys(prevProps)
+    .filter(isEvent)
+    // 新的属性没有，或者有变化
+    .filter((key) => !key in nextProps || prevProps[key] !== nextProps[key])
+    .forEach((key) => {
+      const eventType = key.toLowerCase().substring(2);
+      dom.removeEventListener(eventType, prevProps[key]);
+    });
+
+  // 添加新的事件处理函数
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter((key) => prevProps[key] !== nextProps[key])
+    .forEach((key) => {
+      const eventType = key.toLowerCase().substring(2);
+      dom.addEventListener(eventType, nextProps[key]);
+    });
 }
 
 function commitWork(fiber) {
@@ -39,14 +83,23 @@ function commitWork(fiber) {
   }
 
   const parentDOM = fiber.parent.dom;
-  parentDOM.appendChild(fiber.dom);
+  if (fiber.effectTag === 'PLACEMENT' && fiber.dom) {
+    parentDOM.appendChild(fiber.dom);
+  } else if (fiber.effectTag === 'DELETION') {
+    parentDOM.removeChild(fiber.dom);
+  } else if (fiber.effectTag === 'UPDATE' && fiber.dom) {
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+  }
+
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
 
 function commitRoot() {
-  // add nodes to dom
+  deletions.forEach(commitWork);
   commitWork(wipRoot.child);
+  // 记录刚提交的Root
+  currentRoot = wipRoot;
   // 提交后清空wipRoot
   wipRoot = null;
 }
@@ -73,6 +126,59 @@ function workLoop(deadline) {
 // 第一次请求
 requestIdleCallback(workLoop);
 
+function reconcileChildren(wipFiber, elements) {
+  let index = 0;
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
+  let prevSibling = null;
+
+  while (index < elements.length || oldFiber != null) {
+    const element = elements[index];
+    const sameType = oldFiber && element && element.type == oldFiber.type;
+    let newFiber = null;
+
+    if (sameType) {
+      // update the node
+      newFiber = {
+        type: oldFiber.type,
+        props: element.props,
+        dom: oldFiber.dom,
+        parent: wipFiber,
+        alternate: oldFiber,
+        effectTag: 'UPDATE',
+      };
+    }
+
+    if (element && !sameType) {
+      // add this node / 新建
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: null,
+        parent: wipFiber,
+        alternate: null,
+        effectTag: 'PLACEMENT',
+      };
+    }
+
+    if (oldFiber && !sameType) {
+      // delete the oldFiber's node
+      oldFiber.effectTag = 'DELETION';
+      deletions.push(oldFiber);
+    }
+
+    // 如果`index === 0`，则` fiber.child = newFiber;`，跳出判断，走`prevSibling = newFiber;`，下一次循环fiber tree 进入判断的时候，` prevSibling.sibling = newFiber;`中的`prevSibling.sibling`是上一次构建好的`newfiber`，即`child.sibling = newFiber`
+    if (index === 0) {
+      wipFiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+
+    index++;
+  }
+}
+
 // performUnitOfWork function that not only performs the work but also returns the next unit of work.
 // 接受到的第一个fiber就是root节点
 // 这里主要的功能内容是做一个Fiber Tree 和 处理nextunitofwork
@@ -86,30 +192,10 @@ function performUnitOfWork(fiber) {
     console.log('!fiber.dom', fiber.dom);
   }
 
-  // create new fibers, 给children新建fiber
   const elements = fiber.props.children;
-  let prevSibling = null;
+  // 更新/删除/新建 fiber
+  reconcileChildren(fiber, elements);
 
-  // 建立fiber之间的联系，构建Fiber Tree
-  for (let index = 0; index < elements.length; index++) {
-    const element = elements[index];
-    const newFiber = {
-      type: element.type,
-      props: element.props,
-      parent: fiber,
-      dom: null,
-      child: null,
-      sibling: null,
-    };
-
-    if (index === 0) {
-      fiber.child = newFiber;
-    } else {
-      prevSibling.sibling = newFiber;
-    }
-
-    prevSibling = newFiber;
-  }
   // return next unit of work
   if (fiber.child) {
     return fiber.child;
