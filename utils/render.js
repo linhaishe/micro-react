@@ -1,3 +1,6 @@
+let nextUnitOfWork = null;
+let wipRoot = null;
+
 function createDom(fiber) {
   // 创建dom
   const dom =
@@ -10,19 +13,14 @@ function createDom(fiber) {
     .filter((key) => key !== 'children')
     .map((key) => (dom[key] = fiber.props[key]));
 
-  // 把children的节点内容追加进父节点dom中,递归渲染子元素
-  fiber.props.children.map((child) => render(child, dom));
-
   return dom;
 }
-
-let nextUnitOfWork = null;
 
 function render(element, container) {
   // set next unit of work
   // render的作用不再是创建节点，而是处理nextunitofwork
   // a fiber, we set nextUnitOfWork to the root of the fiber tree. 第一个任务，渲染根节点
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [element],
@@ -31,6 +29,26 @@ function render(element, container) {
     child: null,
     parent: null,
   };
+
+  nextUnitOfWork = wipRoot;
+}
+
+function commitWork(fiber) {
+  if (!fiber) {
+    return;
+  }
+
+  const parentDOM = fiber.parent.dom;
+  parentDOM.appendChild(fiber.dom);
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+
+function commitRoot() {
+  // add nodes to dom
+  commitWork(wipRoot.child);
+  // 提交后清空wipRoot
+  wipRoot = null;
 }
 
 // 调度函数
@@ -45,6 +63,9 @@ function workLoop(deadline) {
     shouldYield = deadline.timeRemaining() < 1;
   }
 
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot();
+  }
   // 没有足够的时间，请求下一次浏览器空闲的时候执行
   requestIdleCallback(workLoop);
 }
@@ -65,11 +86,6 @@ function performUnitOfWork(fiber) {
     console.log('!fiber.dom', fiber.dom);
   }
 
-  // 追加到父节点
-  if (fiber.parent) {
-    fiber.parent.dom.appendChild(fiber.dom);
-  }
-
   // create new fibers, 给children新建fiber
   const elements = fiber.props.children;
   let prevSibling = null;
@@ -83,7 +99,7 @@ function performUnitOfWork(fiber) {
       parent: fiber,
       dom: null,
       child: null,
-      siblings: null,
+      sibling: null,
     };
 
     if (index === 0) {
@@ -93,7 +109,6 @@ function performUnitOfWork(fiber) {
     }
 
     prevSibling = newFiber;
-    index++;
   }
   // return next unit of work
   if (fiber.child) {
