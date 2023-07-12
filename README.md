@@ -153,13 +153,19 @@ the action of making consistent or congruous （in dictionary
 
 fiber object actually look: You can find the detailed structure in the[ React codebase](https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactInternalTypes.js#L49).
 
-## FIber Tree
+## Fiber Tree
 
-FIber Tree 里 一个 parent 只能有一个 child，child 也只能只有一个 sibling
+Fiber Tree Structure: a fiber only has one child and one sibling.如果有多个子节点的话，那么就成为child.sibling.sibling...
 
 Fiber Tree 也是为了更快的找到下一个工作单元
 
-放图
+![IMG_0234](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/IMG_0234.PNG)
+
+![image-20230712220315403](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/image-20230712220315403.png)
+
+![image-20230712220339040](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/image-20230712220339040.png)
+
+Refs: https://www.youtube.com/watch?v=0ympFIwQFJw
 
 ## Reconciliation
 
@@ -203,7 +209,7 @@ function performUnitOfWork(fiber) {
 }
 ```
 
-```
+```js
     if (index === 0) {
       fiber.child = newFiber;
     } else {
@@ -219,16 +225,29 @@ function performUnitOfWork(fiber) {
 
 **the browser could interrupt our work before we finish rendering the whole tree.**
 
+根据之前阶段里提到的，React Fiber work有两个阶段，一个是render，一个是commit，这块就把之前混合在一起提交到dom的处理，分成这两个阶段。
+
 # Step VI: Reconciliation
 
-// reconcileChildren 为什么要写 这个函数的原因 解释一下
-// todo 流程总结/附图
+## reconcileChildren func
+
+为什么写这个函数：we need to compare the elements we receive on the render function to the last fiber tree we committed to the DOM.
+
+for update and delete DOM.
+
+可以只更新做了修改的节点，而不是每次做所有的节点的更新
+
+To compare them we use the type
 
 1. if the old fiber and the new element have the same type, we can keep the DOM node and just update it with the new props
 
 2. if the type is different and there is a new element, it means we need to create a new DOM node
 
 3. and if the types are different and there is an old fiber, we need to remove the old node
+
+// todo Reconciliation sum
+
+# Step VII: Function Components
 
 # refs
 

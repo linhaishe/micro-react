@@ -40,7 +40,7 @@ function updateDom(dom, prevProps, nextProps) {
   const isEvent = (key) => key.startsWith('on');
   // 删除已经没有的props
   Object.keys(prevProps)
-    .filter((key) => key != 'children' && !isEvent(key))
+    .filter((key) => key !== 'children' && !isEvent(key))
     // 不在nextProps中
     .filter((key) => !key in nextProps)
     .forEach((key) => {
@@ -77,16 +77,32 @@ function updateDom(dom, prevProps, nextProps) {
     });
 }
 
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    // 向下寻找最近的DOM，因为函数没有dom
+    commitDeletion(fiber.child, domParent);
+  }
+}
+
 function commitWork(fiber) {
   if (!fiber) {
     return;
   }
 
-  const parentDOM = fiber.parent.dom;
+  // 寻找最近的父DOM节点,因为函数式组件式是没有节点的
+  let domParentFiber = fiber.parent;
+
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent;
+  }
+  const parentDOM = domParentFiber.dom;
+
   if (fiber.effectTag === 'PLACEMENT' && fiber.dom) {
     parentDOM.appendChild(fiber.dom);
   } else if (fiber.effectTag === 'DELETION') {
-    parentDOM.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
   } else if (fiber.effectTag === 'UPDATE' && fiber.dom) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   }
@@ -179,13 +195,14 @@ function reconcileChildren(wipFiber, elements) {
   }
 }
 
-// performUnitOfWork function that not only performs the work but also returns the next unit of work.
-// 接受到的第一个fiber就是root节点
-// 这里主要的功能内容是做一个Fiber Tree 和 处理nextunitofwork
-function performUnitOfWork(fiber) {
-  console.log('fiber', fiber);
-  console.log('fiber.dom', fiber.dom);
+// 处理函数式组件
+function updateFunctionComponent(fiber) {
+  const children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, children);
+}
 
+// 处理非函数式组件
+function updateHostComponent(fiber) {
   // add dom node
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
@@ -195,6 +212,23 @@ function performUnitOfWork(fiber) {
   const elements = fiber.props.children;
   // 更新/删除/新建 fiber
   reconcileChildren(fiber, elements);
+}
+
+// performUnitOfWork function that not only performs the work but also returns the next unit of work.
+// 接受到的第一个fiber就是root节点
+// 这里主要的功能内容是做一个Fiber Tree 和 处理nextunitofwork
+function performUnitOfWork(fiber) {
+  console.log('fiber', fiber);
+  console.log('fiber.dom', fiber.dom);
+
+  const isFunctionComponent = fiber.type instanceof Function;
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    // 正常
+    updateHostComponent(fiber);
+  }
 
   // return next unit of work
   if (fiber.child) {
