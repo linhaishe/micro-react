@@ -147,7 +147,7 @@ function reconcileChildren(wipFiber, elements) {
   let oldFiber = wipFiber.alternate && wipFiber.alternate.child;
   let prevSibling = null;
 
-  while (index < elements.length || oldFiber != null) {
+  while (index < elements.length || oldFiber) {
     const element = elements[index];
     const sameType = oldFiber && element && element.type == oldFiber.type;
     let newFiber = null;
@@ -182,6 +182,11 @@ function reconcileChildren(wipFiber, elements) {
       deletions.push(oldFiber);
     }
 
+    if (oldFiber) {
+      // 下一个oldFiber
+      oldFiber = oldFiber.sibling;
+    }
+
     // 如果`index === 0`，则` fiber.child = newFiber;`，跳出判断，走`prevSibling = newFiber;`，下一次循环fiber tree 进入判断的时候，` prevSibling.sibling = newFiber;`中的`prevSibling.sibling`是上一次构建好的`newfiber`，即`child.sibling = newFiber`
     if (index === 0) {
       wipFiber.child = newFiber;
@@ -195,8 +200,16 @@ function reconcileChildren(wipFiber, elements) {
   }
 }
 
+// 记住上一次的Fiber
+let wipFiber = null;
+let hookIndex = null;
+
 // 处理函数式组件
 function updateFunctionComponent(fiber) {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
+
   const children = [fiber.type(fiber.props)];
   reconcileChildren(fiber, children);
 }
@@ -212,6 +225,44 @@ function updateHostComponent(fiber) {
   const elements = fiber.props.children;
   // 更新/删除/新建 fiber
   reconcileChildren(fiber, elements);
+}
+
+export function useState(initial) {
+  // check in the alternate of the fiber using the hook index
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex];
+
+  // If we have an old hook, we copy the state from the old hook to the new hook, if we don’t we initialize the state.
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [], //
+  };
+
+  // 执行action
+  const actions = oldHook ? oldHook.queue : [];
+  actions.forEach((action) => {
+    hook.state = action(hook.state);
+  });
+
+  const setState = (action) => {
+    hook.queue.push(action); // 遍历queue, 执行action, 因为action可能不止一个
+    // set a new work in progress root as the next unit of work so the work loop can start a new render phase.
+    // 触发渲染，可以通过设置任务进行触发render
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    };
+    nextUnitOfWork = wipRoot;
+    deletions = [];
+  };
+
+  // Then we add the new hook to the fiber, increment the hook index by one, and return the state
+  wipFiber.hooks.push(hook); // 既保留了之前的hooks，也保留了新的hooks
+  hookIndex++;
+  return [hook.state, setState]; // 当前hooks的state
 }
 
 // performUnitOfWork function that not only performs the work but also returns the next unit of work.

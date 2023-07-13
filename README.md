@@ -1,5 +1,3 @@
-// read.me
-
 # micro-react
 
 build your own react with vanilla js
@@ -155,7 +153,7 @@ fiber object actually look: You can find the detailed structure in the[ React co
 
 ## Fiber Tree
 
-Fiber Tree Structure: a fiber only has one child and one sibling.如果有多个子节点的话，那么就成为child.sibling.sibling...
+Fiber Tree Structure: a fiber only has one child and one sibling.如果有多个子节点的话，那么就成为 child.sibling.sibling...
 
 Fiber Tree 也是为了更快的找到下一个工作单元
 
@@ -210,13 +208,13 @@ function performUnitOfWork(fiber) {
 ```
 
 ```js
-    if (index === 0) {
-      fiber.child = newFiber;
-    } else {
-      prevSibling.sibling = newFiber;
-    }
+if (index === 0) {
+  fiber.child = newFiber;
+} else {
+  prevSibling.sibling = newFiber;
+}
 
-    prevSibling = newFiber;
+prevSibling = newFiber;
 ```
 
 这段记录一下，如果`index === 0`，则` fiber.child = newFiber;`，跳出判断，走`prevSibling = newFiber;`，下一次循环 fiber tree 进入判断的时候，` prevSibling.sibling = newFiber;`中的`prevSibling.sibling`是上一次构建好的`newfiber`，即`child.sibling = newFiber`
@@ -225,7 +223,7 @@ function performUnitOfWork(fiber) {
 
 **the browser could interrupt our work before we finish rendering the whole tree.**
 
-根据之前阶段里提到的，React Fiber work有两个阶段，一个是render，一个是commit，这块就把之前混合在一起提交到dom的处理，分成这两个阶段。
+根据之前阶段里提到的，React Fiber work 有两个阶段，一个是 render，一个是 commit，这块就把之前混合在一起提交到 dom 的处理，分成这两个阶段。
 
 # Step VI: Reconciliation
 
@@ -249,6 +247,24 @@ To compare them we use the type
 
 # Step VII: Function Components
 
+# Step VIII: Hooks
+
+hook 是做什么的 把两次渲染的数据关联起来，
+
+初始化全局变量方便在 useState 中使用
+
+We need to initialize some global variables before calling the function component so we can use them inside of the useState function.
+
+用数组去储存多个 hook
+
+add a hooks array to the fiber to support calling useState several times in the same component. And we keep track of the current hook index.
+
+setState function that receives an action (for the Counter example this action is the function that increments the state by one).
+
+`setState((prev) => prev + 1)`
+
+`(prev) => prev + 1` -> function that setState function received.
+
 # refs
 
 1. [react createElement](https://react.dev/reference/react/createElement)
@@ -259,4 +275,4 @@ To compare them we use the type
 6. [【翻译】Reconciliation React 比对算法](https://github.com/cnsnake11/blog/blob/master/ReactNative%E7%BF%BB%E8%AF%91/Reconciliation.md)
 7. [React Components, Elements, and Instances](https://legacy.reactjs.org/blog/2015/12/18/react-components-elements-and-instances.html#top-down-reconciliation)
 8. [Introduction to React Fiber](https://flexiple.com/react/react-fiber/)
-9. https://namansaxena-official.medium.com/react-virtual-dom-reconciliation-and-fiber-reconciler-cd33ceb0478e
+9. [React Virtual DOM, Reconciliation and Fiber Reconciler](https://namansaxena-official.medium.com/react-virtual-dom-reconciliation-and-fiber-reconciler-cd33ceb0478e)
