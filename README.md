@@ -35,7 +35,7 @@ function Greeting({ name }) {
 }
 ```
 
-```js
+```jsx
 function Greeting({ name }) {
   return (
     <h1 className='greeting'>
@@ -115,6 +115,8 @@ react 把所有的渲染工作切碎成一个一个小的工作单元，当浏�
 我们通过 `requestIdleCallback` 进行 `eventloop`
 
 > The **`window.requestIdleCallback()`** method queues a function to be called during a browser's idle periods.
+>
+> `requestIdleCallback`是一个浏览器提供的API，用于在浏览器空闲时执行任务，以避免阻塞主线程并提高页面性能。它接受一个回调函数作为参数，该函数在浏览器空闲时执行。
 
 `requestIdleCallback(callback)`
 
@@ -131,6 +133,32 @@ function lowPriorityWork(deadline) {
 
   if (workList.length > 0) requestIdleCallback(lowPriorityWork);
 }
+```
+
+```js
+let remainingWork = totalWork;
+
+function idleCallback(deadline) {
+  while (deadline.timeRemaining() > 0 && remainingWork > 0) {
+    // 执行任务的一部分工作
+    remainingWork--;
+
+    if (remainingWork <= 0) {
+      // 任务已完成，退出循环
+      break;
+    }
+  }
+
+  if (remainingWork > 0) {
+    requestIdleCallback(idleCallback);
+  }
+}
+
+// 设置总工作量
+const totalWork = 100;
+
+// 请求执行任务
+requestIdleCallback(idleCallback);
 ```
 
 # Step IV: Fibers
@@ -156,6 +184,27 @@ fiber object actually look: You can find the detailed structure in the[ React co
 Fiber Tree Structure: a fiber only has one child and one sibling.如果有多个子节点的话，那么就成为 child.sibling.sibling...
 
 Fiber Tree 也是为了更快的找到下一个工作单元
+
+```jsx
+function App() {    // App
+    return (
+      <div className="wrapper">    // W
+        <div className="list">    // L
+          <div className="list_item">List item A</div>    // LA
+          <div className="list_item">List item B</div>    // LB
+        </div>
+        <div className="section">   // S
+          <button>Add</button>   // SB
+          <span>No. of items: 2</span>   // SS
+        </div>
+      </div>
+    );
+  }
+ 
+  ReactDOM.render(<App />, document.getElementById('root'));  // HostRoot
+```
+
+![React Fiber relationship](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/5f6b3409f5628c49d6136dee_React%20Fiber%20relationship.jpeg)
 
 ![IMG_0234](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/IMG_0234.PNG)
 
@@ -243,7 +292,34 @@ To compare them we use the type
 
 3. and if the types are different and there is an old fiber, we need to remove the old node
 
-// todo Reconciliation sum
+```mermaid
+graph TB
+A[render] --> B[初始化rootFiber,并设为nextUnitOfWork]
+B --> C[workLoop 运行performUnitOfWork]
+C --> D[performUnitOfWork]
+D --> |render phase| E[调用reconcileChildren]
+E -->  G[根据type进行处理]
+G --> |type相同| I[更新fiber,继承DOM,更新属性]
+G --> |还有孩子,type不同| J[新建fiber]
+G --> |还有oldfiber,type不同| K[删除fiber]
+I --> H[完成reconciliation,构建Fiber Tree完成]
+H --> M
+J --> H
+K --> H
+D --> M[将构建好的fiber传入performUnitOfWork]
+M --> N{下一个fiber是否存在?}
+N --> |是| D
+N --> |否,进入commit phase| P[调用commitRoot]
+P --> |DELETION| Q[处理deletion,移除DOM节点]
+P --> R[处理子节点]
+R --> |PLACEMENT| S[添加子节点到DOM]
+R --> |UPDATE| U[更新DOM属性和事件处理函数]
+Q --> V[完成commit阶段]
+S --> V
+U --> V
+```
+
+
 
 # Step VII: Function Components
 
