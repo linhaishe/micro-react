@@ -116,7 +116,7 @@ react 把所有的渲染工作切碎成一个一个小的工作单元，当浏�
 
 > The **`window.requestIdleCallback()`** method queues a function to be called during a browser's idle periods.
 >
-> `requestIdleCallback`是一个浏览器提供的API，用于在浏览器空闲时执行任务，以避免阻塞主线程并提高页面性能。它接受一个回调函数作为参数，该函数在浏览器空闲时执行。
+> `requestIdleCallback`是一个浏览器提供的 API，用于在浏览器空闲时执行任务，以避免阻塞主线程并提高页面性能。它接受一个回调函数作为参数，该函数在浏览器空闲时执行。
 
 `requestIdleCallback(callback)`
 
@@ -186,22 +186,26 @@ Fiber Tree Structure: a fiber only has one child and one sibling.如果有多个
 Fiber Tree 也是为了更快的找到下一个工作单元
 
 ```jsx
-function App() {    // App
-    return (
-      <div className="wrapper">    // W
-        <div className="list">    // L
-          <div className="list_item">List item A</div>    // LA
-          <div className="list_item">List item B</div>    // LB
-        </div>
-        <div className="section">   // S
-          <button>Add</button>   // SB
-          <span>No. of items: 2</span>   // SS
-        </div>
+function App() {
+  // App
+  return (
+    <div className='wrapper'>
+      {' '}
+      // W<div className='list'>
+        {' '}
+        // L<div className='list_item'>List item A</div> // LA
+        <div className='list_item'>List item B</div> // LB
       </div>
-    );
-  }
- 
-  ReactDOM.render(<App />, document.getElementById('root'));  // HostRoot
+      <div className='section'>
+        {' '}
+        // S<button>Add</button> // SB
+        <span>No. of items: 2</span> // SS
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root')); // HostRoot
 ```
 
 ![React Fiber relationship](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/5f6b3409f5628c49d6136dee_React%20Fiber%20relationship.jpeg)
@@ -319,7 +323,7 @@ S --> V
 U --> V
 ```
 
-
+![img](https://raw.githubusercontent.com/linhaishe/blogImageBackup/main/micro-react/fibertree-1.gif)
 
 # Step VII: Function Components
 
